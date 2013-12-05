@@ -94,8 +94,7 @@ func (c *Cfg) Value(name string) interface{} {
 }
 
 //Int retrieves an integer config value with the given name
-// if a value with the given name is not found 0 is returned
-// and an error is logged
+// if a value with the given name is not found the default is returned
 func (c *Cfg) Int(name string, defaultValue int) int {
 	value, ok := c.values[name].(float64)
 	if !ok {
@@ -105,8 +104,7 @@ func (c *Cfg) Int(name string, defaultValue int) int {
 }
 
 //String retrieves a string config value with the given name
-// if a value with the given name is not found "" is returned
-// and an error is logged
+// if a value with the given name is not found the default is returned
 func (c *Cfg) String(name string, defaultValue string) string {
 	value, ok := c.values[name].(string)
 	if !ok {
@@ -116,8 +114,7 @@ func (c *Cfg) String(name string, defaultValue string) string {
 }
 
 //Bool retrieves a bool config value with the given name
-// if a value with the given name is not found false is returned
-// and an error is logged
+// if a value with the given name is not found the default is returned
 func (c *Cfg) Bool(name string, defaultValue bool) bool {
 	value, ok := c.values[name].(bool)
 	if !ok {
@@ -127,8 +124,7 @@ func (c *Cfg) Bool(name string, defaultValue bool) bool {
 }
 
 //Float retrieves a float config value with the given name
-// if a value with the given name is not found 0.0 is returned
-// and an error is logged
+// if a value with the given name is not found the default is returned
 func (c *Cfg) Float(name string, defaultValue float32) float32 {
 	value, ok := c.values[name].(float64)
 	if !ok {
