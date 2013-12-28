@@ -27,6 +27,10 @@ import (
 	"os"
 )
 
+//autoWrite will automatically write out non-existant entries
+// that are defaulted
+var autoWrite bool = false
+
 //Cfg is a container for reading and writing to a simple
 // JSON config file, nothing fancy.  Easy to parse,
 // easy to read and edit by humans
@@ -46,12 +50,15 @@ func LoadCfg(filename string) (*Cfg, error) {
 
 }
 
-//CreateAndLoad automatically creates the passed in config file if it
-// doesn't already exist, then load it.
-func LoadAndCreate(filename string) (*Cfg, error) {
+//LoadOrCreate automatically creates the passed in config file if it
+// doesn't already exist, then load it.  If file gets created, then all
+// values loaded afterwards will be "defaulted" and will be written to this
+// new file
+func LoadOrCreate(filename string) (*Cfg, error) {
 	var err error
 	cfg := &Cfg{FileName: filename}
 	if !cfg.FileExists() {
+		autoWrite = true
 		err = cfg.Write()
 		if err != nil {
 			return nil, err
@@ -98,6 +105,10 @@ func (c *Cfg) Value(name string) interface{} {
 func (c *Cfg) Int(name string, defaultValue int) int {
 	value, ok := c.values[name].(float64)
 	if !ok {
+		if autoWrite {
+			c.SetValue(name, defaultValue)
+			c.Write()
+		}
 		return defaultValue
 	}
 	return int(value)
@@ -108,6 +119,10 @@ func (c *Cfg) Int(name string, defaultValue int) int {
 func (c *Cfg) String(name string, defaultValue string) string {
 	value, ok := c.values[name].(string)
 	if !ok {
+		if autoWrite {
+			c.SetValue(name, defaultValue)
+			c.Write()
+		}
 		return defaultValue
 	}
 	return value
@@ -118,6 +133,10 @@ func (c *Cfg) String(name string, defaultValue string) string {
 func (c *Cfg) Bool(name string, defaultValue bool) bool {
 	value, ok := c.values[name].(bool)
 	if !ok {
+		if autoWrite {
+			c.SetValue(name, defaultValue)
+			c.Write()
+		}
 		return defaultValue
 	}
 	return value
@@ -127,7 +146,13 @@ func (c *Cfg) Bool(name string, defaultValue bool) bool {
 // if a value with the given name is not found the default is returned
 func (c *Cfg) Float(name string, defaultValue float32) float32 {
 	value, ok := c.values[name].(float64)
+
 	if !ok {
+		if autoWrite {
+			c.SetValue(name, defaultValue)
+			c.Write()
+		}
+
 		return defaultValue
 	}
 	return float32(value)
