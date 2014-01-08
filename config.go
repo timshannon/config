@@ -96,8 +96,17 @@ func (c *Cfg) Load() error {
 
 //Value returns the raw interface value for the config entry with the given name
 //  The type is left up to the consumer to determine
-func (c *Cfg) Value(name string) interface{} {
-	return c.values[name]
+func (c *Cfg) Value(name string, defaultValue interface{}) interface{} {
+	value, ok := c.values[name]
+	if !ok {
+		if autoWrite {
+			c.SetValue(name, defaultValue)
+			c.Write()
+		}
+		return defaultValue
+	}
+
+	return value
 }
 
 //Int retrieves an integer config value with the given name
