@@ -30,6 +30,7 @@ import (
 //autoWrite will automatically write out non-existant entries
 // that are defaulted
 var autoWrite bool = false
+var ErrNotFound = errors.New("Value not found")
 
 //Cfg is a container for reading and writing to a simple
 // JSON config file, nothing fancy.  Easy to parse,
@@ -108,6 +109,23 @@ func (c *Cfg) Value(name string, defaultValue interface{}) interface{} {
 	}
 
 	return value
+}
+
+//ValueToType allows you to pass in a struct as the result
+// for which you want to load the config entry into
+// Marshalls the JSON data directly into your passed in type
+func (c *Cfg) ValueToType(name string, result interface{}) error {
+	value, ok := c.values[name]
+	if !ok {
+		return ErrNotFound
+	}
+	//marshall value
+	j, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(j, result)
+	return err
 }
 
 //Int retrieves an integer config value with the given name
