@@ -59,6 +59,7 @@ func LoadOrCreate(filename string) (*Cfg, error) {
 	cfg := &Cfg{FileName: filename}
 	if !cfg.FileExists() {
 		autoWrite = true
+		cfg.values = make(map[string]interface{})
 		err = cfg.Write()
 		if err != nil {
 			return nil, err
