@@ -1,7 +1,7 @@
 Config
 =====
 
-*Simple JSON config file.  
+Simple JSON config file.  
 
 To Use
 ------
@@ -22,5 +22,3 @@ To Use
 	if err != nil {
 		panic("Cannot write settings.json: %v", err)
 	}
-
-
