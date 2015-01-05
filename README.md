@@ -9,7 +9,7 @@ To Use
 	import "bitbucket.org/tshannon/config"
 	
 	//Loads the json file, creates it if one doesn't exist
-	cfg, err := LoadAndCreate("settings.json")
+	cfg, err := LoadOrCreate("settings.json")
 	if err != nil {
 		panic(fmt.Sprintf("Cannot load settings.json: %v", err)
 	}
