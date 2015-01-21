@@ -22,3 +22,5 @@ To Use
 	if err != nil {
 		panic("Cannot write settings.json: %v", err)
 	}
+
+You can pass a slice filenames into the Load and LoadOrCreate, and it will use the first one it finds.  If none are found when passed into LoadOrCreate, then the first file in the slice will be created.
