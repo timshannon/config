@@ -25,68 +25,88 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"strconv"
 )
 
-//autoWrite will automatically write out non-existant entries
-// that are defaulted
-var autoWrite bool = false
 var ErrNotFound = errors.New("Value not found")
 
 //Cfg is a container for reading and writing to a simple
 // JSON config file, nothing fancy.  Easy to parse,
 // easy to read and edit by humans
 type Cfg struct {
-	FileName string
-	values   map[string]interface{}
+	fileName       string
+	values         map[string]interface{}
+	autoWrite      bool
+	isEnv          bool
+	variablePrefix string
 }
 
-//LoadCfg loads the config file from the passed in config path
+//Load loads the config file from the passed in config path
 // If the config file cannot be parsed (i.e. isn't valid json) or
 // cannot be found an error will be returned
-func LoadCfg(filename string) (*Cfg, error) {
-	c := &Cfg{FileName: filename}
-	err := c.Load()
-
-	return c, err
-
+// filename can be a slice of filenames, the first file found is loaded
+// if none of the files in the slice are found, an error is returned
+func Load(filename ...string) (*Cfg, error) {
+	for i := range filename {
+		c := &Cfg{fileName: filename[i]}
+		err := c.Load()
+		if err == os.ErrNotExist {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+	return nil, os.ErrNotExist
 }
 
 //LoadOrCreate automatically creates the passed in config file if it
 // doesn't already exist, then load it.  If file gets created, then all
 // values loaded afterwards will be "defaulted" and will be written to this
 // new file
-func LoadOrCreate(filename string) (*Cfg, error) {
-	var err error
-	cfg := &Cfg{FileName: filename}
-	if !cfg.FileExists() {
-		autoWrite = true
-		cfg.values = make(map[string]interface{})
-		err = cfg.Write()
-		if err != nil {
-			return nil, err
+// filename can be a slice of filenames, the first file found is loaded
+// if none of the files in the slice are found, the first file in the slice is created
+func LoadOrCreate(filename ...string) (*Cfg, error) {
+	cfg, err := Load(filename...)
+
+	if err == os.ErrNotExist {
+		cfg := &Cfg{
+			fileName:  filename[0],
+			autoWrite: true,
+			values:    make(map[string]interface{}),
 		}
+		err = cfg.Write()
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	err = cfg.Load()
-
-	return cfg, err
+	return cfg, nil
 }
 
-func (c *Cfg) FileExists() bool {
-	file, err := os.Open(c.FileName)
-	file.Close()
-
-	return err == nil || !os.IsNotExist(err)
+//LoadEnv loads the CFG values from environment variables instead
+// of from a file.  Environment variables will be prefixed with the
+// the passed in variablePrefix
+func LoadEnv(variablePrefix string) *Cfg {
+	return &Cfg{
+		isEnv:          true,
+		variablePrefix: variablePrefix,
+	}
 }
 
 //Load loads a config file from the passed in location
 func (c *Cfg) Load() error {
-	if c.FileName == "" {
+	if c.isEnv {
+		return nil
+	}
+
+	if c.fileName == "" {
 		err := errors.New("No Filename set for Cfg object")
 		return err
 	}
 
-	data, err := ioutil.ReadFile(c.FileName)
+	data, err := ioutil.ReadFile(c.fileName)
 	if err != nil {
 		return err
 	}
@@ -96,12 +116,24 @@ func (c *Cfg) Load() error {
 	return nil
 }
 
+func (c *Cfg) FileName() string {
+	return c.fileName
+}
+
 //Value returns the raw interface value for the config entry with the given name
 //  The type is left up to the consumer to determine
+// if cfg is an ENV type, result will always be a string
 func (c *Cfg) Value(name string, defaultValue interface{}) interface{} {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return defaultValue
+		}
+		return value
+	}
 	value, ok := c.values[name]
 	if !ok {
-		if autoWrite {
+		if c.autoWrite {
 			c.SetValue(name, defaultValue)
 			c.Write()
 		}
@@ -115,10 +147,20 @@ func (c *Cfg) Value(name string, defaultValue interface{}) interface{} {
 // for which you want to load the config entry into
 // Marshalls the JSON data directly into your passed in type
 func (c *Cfg) ValueToType(name string, result interface{}) error {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return ErrNotFound
+		}
+
+		err := json.Unmarshal([]byte(value), result)
+		return err
+	}
 	value, ok := c.values[name]
 	if !ok {
 		return ErrNotFound
 	}
+
 	//marshall value
 	j, err := json.Marshal(value)
 	if err != nil {
@@ -131,9 +173,20 @@ func (c *Cfg) ValueToType(name string, result interface{}) error {
 //Int retrieves an integer config value with the given name
 // if a value with the given name is not found the default is returned
 func (c *Cfg) Int(name string, defaultValue int) int {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return defaultValue
+		}
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			return defaultValue
+		}
+		return i
+	}
 	value, ok := c.values[name].(float64)
 	if !ok {
-		if autoWrite {
+		if c.autoWrite {
 			c.SetValue(name, defaultValue)
 			c.Write()
 		}
@@ -145,9 +198,16 @@ func (c *Cfg) Int(name string, defaultValue int) int {
 //String retrieves a string config value with the given name
 // if a value with the given name is not found the default is returned
 func (c *Cfg) String(name string, defaultValue string) string {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return defaultValue
+		}
+		return value
+	}
 	value, ok := c.values[name].(string)
 	if !ok {
-		if autoWrite {
+		if c.autoWrite {
 			c.SetValue(name, defaultValue)
 			c.Write()
 		}
@@ -159,9 +219,20 @@ func (c *Cfg) String(name string, defaultValue string) string {
 //Bool retrieves a bool config value with the given name
 // if a value with the given name is not found the default is returned
 func (c *Cfg) Bool(name string, defaultValue bool) bool {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return defaultValue
+		}
+		b, err := strconv.ParseBool(value)
+		if err != nil {
+			return defaultValue
+		}
+		return b
+	}
 	value, ok := c.values[name].(bool)
 	if !ok {
-		if autoWrite {
+		if c.autoWrite {
 			c.SetValue(name, defaultValue)
 			c.Write()
 		}
@@ -173,10 +244,21 @@ func (c *Cfg) Bool(name string, defaultValue bool) bool {
 //Float retrieves a float config value with the given name
 // if a value with the given name is not found the default is returned
 func (c *Cfg) Float(name string, defaultValue float32) float32 {
+	if c.isEnv {
+		value := os.Getenv(c.variablePrefix + name)
+		if value == "" {
+			return defaultValue
+		}
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return defaultValue
+		}
+		return float32(f)
+	}
 	value, ok := c.values[name].(float64)
 
 	if !ok {
-		if autoWrite {
+		if c.autoWrite {
 			c.SetValue(name, defaultValue)
 			c.Write()
 		}
@@ -188,20 +270,30 @@ func (c *Cfg) Float(name string, defaultValue float32) float32 {
 
 //SetValue sets a config value.  It is left up to the end user
 // to then write out the new values with the .Write() function
+// Environment variables aren't set to any value.
 func (c *Cfg) SetValue(name string, value interface{}) {
+	if c.isEnv {
+		return
+	}
+
 	c.values[name] = value
 }
 
 //Write writes the config values to the config's file location
+// for Env CFG's nothing is written, as the env variables are
+// set immediately
 func (c *Cfg) Write() error {
-	if c.FileName == "" {
+	if c.isEnv {
+		return nil
+	}
+	if c.fileName == "" {
 		return errors.New("No FileName set for this config")
 	}
 	data, err := json.MarshalIndent(c.values, "", "    ")
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(c.FileName, data, 0644)
+	err = ioutil.WriteFile(c.fileName, data, 0644)
 
 	return err
 
