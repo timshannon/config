@@ -51,7 +51,7 @@ func Load(filename ...string) (*Cfg, error) {
 	for i := range filename {
 		c := &Cfg{fileName: filename[i]}
 		err := c.Load()
-		if err == os.ErrNotExist {
+		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
@@ -71,8 +71,8 @@ func Load(filename ...string) (*Cfg, error) {
 func LoadOrCreate(filename ...string) (*Cfg, error) {
 	cfg, err := Load(filename...)
 
-	if err == os.ErrNotExist {
-		cfg := &Cfg{
+	if os.IsNotExist(err) {
+		cfg = &Cfg{
 			fileName:  filename[0],
 			autoWrite: true,
 			values:    make(map[string]interface{}),
