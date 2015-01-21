@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 )
 
-//Standard file locations build an OS specific list of standard file locations
+//StandardFileLocations builds an OS specific list of standard file locations
 // for where a config file should be loaded from.
 // Generally follows this priority list:
 // 1. User locations are used before...
@@ -45,6 +45,12 @@ func StandardFileLocations(cfgPath string) []string {
 	//get running dir
 	locations := append(userLocations(), systemLocations()...)
 
+	for i := range locations {
+		if locations[i] != "" {
+			locations[i] = filepath.Join(locations[i], cfgPath)
+		}
+	}
+
 	runningDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		runningDir = "."
@@ -52,11 +58,5 @@ func StandardFileLocations(cfgPath string) []string {
 	runningDir = filepath.Join(runningDir, filepath.Base(cfgPath))
 
 	locations = append(locations, runningDir)
-
-	for i := range locations {
-		if locations[i] != "" {
-			locations[i] = filepath.Join(locations[i], cfgPath)
-		}
-	}
 	return locations
 }
