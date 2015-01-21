@@ -44,7 +44,7 @@ You can also use the ```StandardFileLocations``` which will return a slice of st
  Note that parent folder paths (myApp in this example) are stripped for the last eligble file location so the config file will exist in the same directory as the running executable.
 
 
-Below is a completed example of an application which would support configuration being supplied either via config files in standard OS locations,  or Environment variables.
+Below is a complete example of an application which would support configuration being supplied either via config files in standard OS locations,  or Environment variables.
 ```
 package main
 
