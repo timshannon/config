@@ -1,4 +1,4 @@
-//Copyright (c) 2013 Tim Shannon
+//Copyright (c) 2015 Tim Shannon
 //
 //Permission is hereby granted, free of charge, to any person obtaining a copy
 //of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -75,6 +76,10 @@ func LoadOrCreate(filename ...string) (*Cfg, error) {
 			fileName:  filename[0],
 			autoWrite: true,
 			values:    make(map[string]interface{}),
+		}
+		err = os.MkdirAll(filepath.Dir(filename[0]), 0644)
+		if err != nil {
+			return nil, err
 		}
 		err = cfg.Write()
 	}
