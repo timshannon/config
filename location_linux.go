@@ -43,11 +43,26 @@ func userLocations() []string {
 }
 
 func systemLocations() []string {
+	defaults := []string{"/etc/xdg", "/etc"}
 	envLocations := os.Getenv("XDG_CONFIG_DIRS")
 	if envLocations == "" {
-		return []string{"/etc/xdg", "/etc"}
+		return defaults
 	}
 	locations := strings.Split(envLocations, ":")
+
+	for d := range defaults {
+		found := false
+		for l := range locations {
+			locations[l] = filepath.Clean(locations[l])
+			if locations[l] == defaults[d] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			locations = append(locations, defaults[d])
+		}
+	}
 
 	return locations
 }
