@@ -55,7 +55,7 @@ func Load(filename ...string) (*Cfg, error) {
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, c.error(err)
 		}
 		return c, nil
 	}
@@ -69,25 +69,25 @@ func Load(filename ...string) (*Cfg, error) {
 // filename can be a slice of filenames, the first file found is loaded
 // if none of the files in the slice are found, the first file in the slice is created
 func LoadOrCreate(filename ...string) (*Cfg, error) {
-	cfg, err := Load(filename...)
+	c, err := Load(filename...)
 
 	if os.IsNotExist(err) {
-		cfg = &Cfg{
+		c = &Cfg{
 			fileName:  filename[0],
 			autoWrite: true,
 			values:    make(map[string]interface{}),
 		}
 		err = os.MkdirAll(filepath.Dir(filename[0]), 0644)
 		if err != nil {
-			return nil, err
+			return nil, c.error(err)
 		}
-		err = cfg.Write()
+		err = c.Write()
 	}
 	if err != nil {
-		return nil, err
+		return nil, c.error(err)
 	}
 
-	return cfg, nil
+	return c, nil
 }
 
 //LoadEnv loads the CFG values from environment variables instead
@@ -113,10 +113,10 @@ func (c *Cfg) Load() error {
 
 	data, err := ioutil.ReadFile(c.fileName)
 	if err != nil {
-		return err
+		return c.error(err)
 	}
 	if err = json.Unmarshal(data, &c.values); err != nil {
-		return err
+		return c.error(err)
 	}
 	return nil
 }
@@ -155,24 +155,24 @@ func (c *Cfg) ValueToType(name string, result interface{}) error {
 	if c.isEnv {
 		value := os.Getenv(c.variablePrefix + name)
 		if value == "" {
-			return ErrNotFound
+			return c.error(ErrNotFound)
 		}
 
 		err := json.Unmarshal([]byte(value), result)
-		return err
+		return c.error(err)
 	}
 	value, ok := c.values[name]
 	if !ok {
-		return ErrNotFound
+		return c.error(ErrNotFound)
 	}
 
 	//marshall value
 	j, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return c.error(err)
 	}
 	err = json.Unmarshal(j, result)
-	return err
+	return c.error(err)
 }
 
 //Int retrieves an integer config value with the given name
@@ -296,10 +296,16 @@ func (c *Cfg) Write() error {
 	}
 	data, err := json.MarshalIndent(c.values, "", "    ")
 	if err != nil {
-		return err
+		return c.error(err)
 	}
 	err = ioutil.WriteFile(c.fileName, data, 0644)
 
-	return err
+	return c.error(err)
 
+}
+
+//error returns the passed in error with the context of which selected filename
+// the error occurred on
+func (c *Cfg) error(err error) error {
+	return errors.New("Error processing config file " + c.FileName() + ": " + err.Error())
 }
