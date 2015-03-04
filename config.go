@@ -23,7 +23,6 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -60,7 +59,7 @@ func Load(filename ...string) (*Cfg, error) {
 		}
 		return c, nil
 	}
-	return nil, fmt.Errorf(os.ErrNotExist.Error()+" - None of the passed in filenames exist: %v", filename)
+	return nil, os.ErrNotExist
 }
 
 //LoadOrCreate automatically creates the passed in config file if it
@@ -78,7 +77,7 @@ func LoadOrCreate(filename ...string) (*Cfg, error) {
 			autoWrite: true,
 			values:    make(map[string]interface{}),
 		}
-		err = os.MkdirAll(filepath.Dir(filename[0]), 0644)
+		err = os.MkdirAll(filepath.Dir(filename[0]), 0777)
 		if err != nil {
 			return nil, errWithFile(c.FileName(), err)
 		}
@@ -299,7 +298,7 @@ func (c *Cfg) Write() error {
 	if err != nil {
 		return errWithFile(c.FileName(), err)
 	}
-	err = ioutil.WriteFile(c.fileName, data, 0644)
+	err = ioutil.WriteFile(c.fileName, data, 0666)
 
 	return err
 
