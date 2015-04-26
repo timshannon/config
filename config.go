@@ -176,8 +176,12 @@ func (c *Cfg) ValueToType(name string, result interface{}) error {
 	if err != nil {
 		return errWithFile(c.FileName(), err)
 	}
+
 	err = json.Unmarshal(j, result)
-	return errWithFile(c.FileName(), err)
+	if err != nil {
+		return errWithFile(c.FileName(), err)
+	}
+	return nil
 }
 
 //Int retrieves an integer config value with the given name
