@@ -29,8 +29,6 @@ import (
 	"strconv"
 )
 
-var ErrNotFound = errors.New("Value not found")
-
 //Cfg is a container for reading and writing to a simple
 // JSON config file, nothing fancy.  Easy to parse,
 // easy to read and edit by humans
@@ -121,6 +119,7 @@ func (c *Cfg) Load() error {
 	return nil
 }
 
+// FileName is the path to the configuration file
 func (c *Cfg) FileName() string {
 	return c.fileName
 }
@@ -151,11 +150,13 @@ func (c *Cfg) Value(name string, defaultValue interface{}) interface{} {
 //ValueToType allows you to pass in a struct as the result
 // for which you want to load the config entry into
 // Marshalls the JSON data directly into your passed in type
+// If the value doesn't exist, then the passed in result value
+// will be set as the default
 func (c *Cfg) ValueToType(name string, result interface{}) error {
 	if c.isEnv {
 		value := os.Getenv(c.variablePrefix + name)
 		if value == "" {
-			return errWithFile(c.FileName(), ErrNotFound)
+			return nil
 		}
 
 		err := json.Unmarshal([]byte(value), result)
@@ -163,7 +164,11 @@ func (c *Cfg) ValueToType(name string, result interface{}) error {
 	}
 	value, ok := c.values[name]
 	if !ok {
-		return errWithFile(c.FileName(), ErrNotFound)
+		if c.autoWrite {
+			c.SetValue(name, result)
+			c.Write()
+		}
+		return nil
 	}
 
 	//marshall value
