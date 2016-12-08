@@ -29,7 +29,7 @@ You can also use the ```StandardFileLocations``` which will return a slice of st
 
  1. User locations are used before...
  2. System locations which are used before ...
- 3. The imediate running directory of the application
+ 3. The immediate running directory of the application
 
  The result set will be joined with the passed in filepath.  Passing in a filepath with a leading directory is encouraged to keep your config folders organized.
 
